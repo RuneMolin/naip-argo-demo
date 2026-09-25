@@ -91,6 +91,39 @@ or Kafka-based `kafkasql`) before using this in production, and double check
 the exact env var names against the Apicurio version you deploy (they changed
 between the 2.x and 3.x major releases).
 
+## Prerequisites: what this repo assumes already exists
+
+This repo only contains Argo CD Application/Helm manifests — it does not
+provision a cluster, install Argo CD, or install the Strimzi Kafka operator.
+For a from-scratch environment (e.g. a Hetzner Cloud cluster with one master
+and 2-3 workers), build that out as a separate, layered IaC stack that feeds
+into this repo as its last step:
+
+```mermaid
+flowchart TD
+    A["1. Terraform<br/>servers, network, firewall,<br/>cloud load balancer (optional)"] --> B["2. Cluster bootstrap<br/>k3s / kubeadm / kOps / Rancher"]
+    B --> C["3. Cluster add-ons<br/>CSI driver, cloud controller manager,<br/>ingress/MetalLB, cert-manager"]
+    C --> D["4. Argo CD install<br/>+ Strimzi operator install"]
+    D --> E["5. This repo (naip-argo)<br/>apply bootstrap/&lt;env&gt;.yaml once,<br/>everything after is GitOps"]
+```
+
+1. **Terraform** — provisions the servers, private network, firewall rules,
+   SSH keys, and optionally a cloud load balancer resource.
+2. **Cluster bootstrap** — turns the bare servers into a working Kubernetes
+   cluster (e.g. k3s via a script/Ansible/`k3sup`, or kubeadm). Terraform
+   doesn't do this natively; it's typically wired in via provisioners or a
+   separate step. Community modules like `kube-hetzner` combine steps 1-3.
+3. **Cluster add-ons** — the CSI driver (needed for Strimzi's PVCs) and cloud
+   controller manager (needed for `Service type: LoadBalancer`), plus an
+   ingress controller/MetalLB and cert-manager if required. Usually applied
+   via Terraform's `helm`/`kubectl` providers or a plain script.
+4. **Argo CD + the Strimzi Kafka operator** — installed via Helm chart or raw
+   manifests. This is the boundary where generic infra IaC hands off to
+   GitOps: once Argo CD is running, avoid also managing the same resources
+   via Terraform.
+5. **This repo** — apply the relevant `bootstrap/<env>.yaml` once (see below);
+   from then on Argo CD self-manages `wrapper/` → `solution/` → `kafka/`.
+
 ## How to adapt this for a new project
 
 1. Rename `naip-argo-*` in the three `Chart.yaml` files and update `repoURL`
