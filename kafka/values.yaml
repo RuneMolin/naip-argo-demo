@@ -5,7 +5,7 @@ environment:
 
 kafka:
   clusterName: naip-kafka
-  image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+  image: quay.io/strimzi/kafka:latest-kafka-4.2.0
   replicas: 3
   storageClassName: standard
   storageSize: 10Gi
@@ -20,7 +20,7 @@ kafka:
   mirrorMaker2:
     enabled: false
     replicas: 1
-    image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+    image: quay.io/strimzi/kafka:latest-kafka-4.2.0
     topicsPattern: '.*'
     groupsPattern: '.*'
     source:

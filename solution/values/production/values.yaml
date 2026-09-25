@@ -15,7 +15,7 @@ kafkaChart:
 
 kafka:
   clusterName: naip-kafka
-  image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+  image: quay.io/strimzi/kafka:latest-kafka-4.2.0
   replicas: 3
   storageClassName: standard
   superUsers:
@@ -88,7 +88,7 @@ kafka:
       mirrorMaker2:
         enabled: true
         replicas: 2
-        image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+        image: quay.io/strimzi/kafka:latest-kafka-4.2.0
         topicsPattern: '.*'
         groupsPattern: '.*'
         source:

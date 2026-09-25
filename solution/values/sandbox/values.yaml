@@ -7,7 +7,7 @@ environment:
 
 kafka:
   clusterName: naip-kafka
-  image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+  image: quay.io/strimzi/kafka:latest-kafka-4.2.0
   replicas: 1
   storageClassName: standard
   superUsers:
