@@ -1,0 +1,8 @@
+apiVersion: v2
+name: naip-argo-kafka
+description: >-
+  Leaf chart: the actual Strimzi Kafka cluster, explicitly declared topics,
+  users, an active/passive KafkaMirrorMaker2 pairing, and Apicurio Registry.
+type: application
+version: 0.1.0
+appVersion: '1.0'

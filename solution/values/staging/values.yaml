@@ -1,0 +1,116 @@
+# STAGING: full DR setup — two Kafka clusters, "active" and "passive", wired
+# together with MirrorMaker2 (identity replication, so topic names don't change
+# on failover). Each site becomes its own child Argo CD Application + namespace.
+cluster:
+  name: staging
+environment:
+  name: staging
+
+# Usually matches wrapper/values/staging's source.targetRevision — override
+# independently only if you need to roll the kafka chart forward/back without
+# touching the rest of the solution.
+kafkaChart:
+  targetRevision: v1.1.0
+
+kafka:
+  clusterName: naip-kafka
+  image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+  replicas: 3
+  storageClassName: standard
+  superUsers:
+    - admin
+
+  # Shared across both sites — MirrorMaker2 keeps them identical.
+  topics:
+    - name: orders.events
+      partitions: 6
+      replicationFactor: 3
+      config:
+        retention.ms: '604800000'
+    - name: orders.dead-letter
+      partitions: 3
+      replicationFactor: 3
+      config:
+        retention.ms: '1209600000'
+
+  apicurio:
+    enabled: true
+    image: apicurio/apicurio-registry-mem:2.6.6.Final
+    replicas: 1
+
+  sites:
+    # Applications read/write here normally.
+    - role: active
+      namespace: staging-active
+      # For a real DR setup this should be the API server of a *separate*
+      # physical/registered cluster, e.g. https://staging-dc1.example.com:6443.
+      # Left at the default (same cluster) so this example works standalone.
+      destinationServer: https://kubernetes.default.svc
+      # Exposes this cluster externally so the passive site's MirrorMaker2 can
+      # reach it — only actually required once active/passive live on
+      # different physical clusters; same-cluster cross-namespace traffic
+      # works over the plain internal listener without this.
+      externalListener:
+        enabled: false
+        type: loadbalancer
+      # KafkaUser the passive site's MirrorMaker2 authenticates as when
+      # pulling from here. Its generated Secret must be copied into the
+      # passive namespace out-of-band (Vault/ESO/manual) as "mirrormaker".
+      users:
+        - name: mirrormaker
+          acls:
+            - resource:
+                type: topic
+                name: '*'
+                patternType: literal
+              operations:
+                - Read
+                - Describe
+            - resource:
+                type: group
+                name: '*'
+                patternType: literal
+              operations:
+                - Read
+
+    # Standby/DR cluster kept in sync from `active`. Apps normally do NOT
+    # read/write here until a failover.
+    - role: passive
+      namespace: staging-passive
+      destinationServer: https://kubernetes.default.svc
+      # Local `mirrormaker` KafkaUser this site's own MirrorMaker2 connects as
+      # when writing the mirrored data into itself (the "target" side).
+      users:
+        - name: mirrormaker
+          acls:
+            - resource:
+                type: topic
+                name: '*'
+                patternType: literal
+              operations:
+                - Read
+                - Write
+                - Create
+                - Describe
+            - resource:
+                type: group
+                name: '*'
+                patternType: literal
+              operations:
+                - Read
+      mirrorMaker2:
+        enabled: true
+        replicas: 1
+        image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+        topicsPattern: '.*'
+        groupsPattern: '.*'
+        source:
+          alias: active
+          # Same-cluster cross-namespace DNS; swap for the active site's
+          # external listener address once it lives on a separate cluster.
+          bootstrapServers: naip-kafka-kafka-bootstrap.staging-active.svc.cluster.local:9092
+          authentication:
+            type: scram-sha-512
+            username: mirrormaker
+            passwordSecretName: mirrormaker
+            passwordSecretKey: password

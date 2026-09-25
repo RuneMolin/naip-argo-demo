@@ -1,0 +1,84 @@
+# Child Argo CD Application(s) — the sole "fan-out" point for Kafka in the
+# whole app-of-apps tree, mirroring solution-helm-chart/templates/kafka-argo-app.yaml
+# but without the Spring Boot topic-scanning logic: topics are taken as-is
+# from .Values.kafka.topics.
+#
+# One Application is rendered per entry in `.Values.kafka.sites`:
+#   - a "standalone" environment (e.g. sandbox) declares exactly one site,
+#     producing a single Kafka cluster with no replication.
+#   - an active/passive DR environment (e.g. staging, production) declares
+#     two sites — role "active" and role "passive" — producing two Kafka
+#     clusters wired together via MirrorMaker2 (configured per-site below).
+{{- range $site := .Values.kafka.sites }}
+{{- $isStandalone := eq $site.role "standalone" }}
+{{- $appName := $isStandalone | ternary (printf "%s-kafka" $.Values.environment.name) (printf "%s-kafka-%s" $.Values.environment.name $site.role) }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ $appName }}
+  namespace: {{ $.Values.argocd.namespace }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ $.Values.argocd.project }}
+  destination:
+    # Point this at a *different* registered cluster per site for real DR;
+    # defaults to the local cluster so the example works with a single one.
+    server: {{ default "https://kubernetes.default.svc" $site.destinationServer }}
+    namespace: {{ $site.namespace }}
+  source:
+    repoURL: {{ $.Values.kafkaChart.repoURL }}
+    targetRevision: {{ $.Values.kafkaChart.targetRevision }}
+    path: {{ $.Values.kafkaChart.path }}
+    helm:
+      releaseName: {{ $appName }}
+      valuesObject:
+        environment:
+          name: {{ $.Values.environment.name }}
+        kafka:
+          # Cluster sizing/topics/superusers/apicurio are shared across all
+          # sites of this environment; only role-specific bits differ below.
+          clusterName: {{ $.Values.kafka.clusterName }}
+          image: {{ $.Values.kafka.image }}
+          replicas: {{ $.Values.kafka.replicas }}
+          storageClassName: {{ $.Values.kafka.storageClassName }}
+          superUsers:
+            {{- toYaml $.Values.kafka.superUsers | nindent 12 }}
+          topics:
+            {{- toYaml $.Values.kafka.topics | nindent 12 }}
+          {{- with $.Values.kafka.apicurio }}
+          apicurio:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $site.users }}
+          users:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $site.externalListener }}
+          externalListener:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          mirrorMaker2:
+            {{- if $site.mirrorMaker2 }}
+            {{- toYaml $site.mirrorMaker2 | nindent 12 }}
+            {{- else }}
+            enabled: false
+            {{- end }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    # Needed because active/passive sites live in namespaces (e.g.
+    # staging-active/staging-passive) distinct from the environment namespace
+    # the wrapper chart creates.
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 1m
+        factor: 2
+        maxDuration: 3m
+{{- end }}
+

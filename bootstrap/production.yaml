@@ -1,0 +1,26 @@
+# Literal entry point for production — always pin `targetRevision` to a tag
+# that has already run in staging; never point this at `main`.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: naip-production-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: naip
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  source:
+    repoURL: https://example.com/your-org/naip-argo.git
+    targetRevision: v1.0.0
+    path: wrapper
+    helm:
+      releaseName: naip-production-root
+      valueFiles:
+        - values/production/values.yaml
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

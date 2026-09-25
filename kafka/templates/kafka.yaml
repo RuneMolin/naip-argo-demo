@@ -1,0 +1,54 @@
+# The Strimzi Kafka cluster itself, running in KRaft mode (no ZooKeeper).
+# Broker/controller sizing lives in the separate KafkaNodePool (kafka-node-pool.yaml);
+# this CR only carries cluster-wide config (listeners, auth, replication).
+{{- $replicas := int .Values.kafka.replicas }}
+{{- $rf := int (lt $replicas 3 | ternary 1 3) }}
+{{- $isr := eq $rf 1 | ternary 1 2 }}
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: {{ .Values.kafka.clusterName }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    # Required so Strimzi reads broker/controller sizing from KafkaNodePool CRs.
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+spec:
+  kafka:
+    version: {{ last (splitList "-" .Values.kafka.image) }}
+    image: {{ .Values.kafka.image }}
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+        authentication:
+          type: scram-sha-512
+      {{- if .Values.kafka.externalListener.enabled }}
+      # Only needed on whichever cluster plays the "active/source" role in an
+      # active/passive pair, so the remote MirrorMaker2 can reach it.
+      - name: external
+        port: 9094
+        type: {{ .Values.kafka.externalListener.type }}
+        tls: true
+        authentication:
+          type: scram-sha-512
+      {{- end }}
+    authorization:
+      type: simple
+      {{- if .Values.kafka.superUsers }}
+      superUsers:
+        {{- range .Values.kafka.superUsers }}
+        - {{ . }}-user
+        {{- end }}
+      {{- end }}
+    config:
+      offsets.topic.replication.factor: {{ $rf }}
+      transaction.state.log.replication.factor: {{ $rf }}
+      transaction.state.log.min.isr: {{ $isr }}
+      default.replication.factor: {{ $rf }}
+      min.insync.replicas: {{ $isr }}
+      auto.create.topics.enable: false
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: naip-argo-solution
+description: >-
+  Per cluster/environment chart. Does not deploy any Kafka resources itself —
+  it renders one child Argo CD Application per entry in kafka.sites,
+  forwarding the environment's explicit topic list, MirrorMaker2 role
+  and Apicurio config down to the `kafka` chart.
+type: application
+version: 0.1.0
+appVersion: '1.0'

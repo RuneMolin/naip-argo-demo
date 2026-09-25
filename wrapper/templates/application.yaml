@@ -1,0 +1,39 @@
+# The single root Argo CD Application. Its only job is to hand off to the
+# "solution" chart, which then decides what actually gets deployed
+# (kafka, apicurio, mirrormaker2, ...) for this cluster/environment.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: naip-{{ .Values.cluster.name }}-{{ .Values.environment.name }}
+  namespace: {{ .Values.argocd.namespace }}
+  annotations:
+    # High sync-wave: this Application must reconcile after infra-level apps.
+    argocd.argoproj.io/sync-wave: "100"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: {{ .Values.argocd.project }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.environment.name }}
+  source:
+    repoURL: {{ .Values.source.repoURL }}
+    targetRevision: {{ .Values.source.targetRevision }}
+    path: {{ .Values.source.path }}
+    helm:
+      releaseName: naip-{{ .Values.cluster.name }}-{{ .Values.environment.name }}
+      # Selects the per-environment overrides from solution/values/<env>/values.yaml
+      valueFiles:
+        - values/{{ .Values.environment.name }}/values.yaml
+      valuesObject:
+        cluster:
+          name: {{ .Values.cluster.name }}
+        environment:
+          name: {{ .Values.environment.name }}
+        argocd:
+          namespace: {{ .Values.argocd.namespace }}
+          project: {{ .Values.argocd.project }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

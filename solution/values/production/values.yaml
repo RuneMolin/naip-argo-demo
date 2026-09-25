@@ -1,0 +1,103 @@
+# PRODUCTION: same active/passive DR shape as staging, sized up and — unlike
+# the staging example — actually pointed at two distinct registered clusters,
+# since production DR only means something if the two sites can't both go
+# down together.
+cluster:
+  name: production
+environment:
+  name: production
+
+# Usually matches wrapper/values/production's source.targetRevision — override
+# independently only if you need to roll the kafka chart forward/back without
+# touching the rest of the solution.
+kafkaChart:
+  targetRevision: v1.0.0
+
+kafka:
+  clusterName: naip-kafka
+  image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+  replicas: 3
+  storageClassName: standard
+  superUsers:
+    - admin
+
+  topics:
+    - name: orders.events
+      partitions: 12
+      replicationFactor: 3
+      config:
+        retention.ms: '604800000'
+    - name: orders.dead-letter
+      partitions: 6
+      replicationFactor: 3
+      config:
+        retention.ms: '1209600000'
+
+  apicurio:
+    enabled: true
+    image: apicurio/apicurio-registry-mem:2.6.6.Final
+    replicas: 2
+
+  sites:
+    - role: active
+      namespace: production-active
+      # Register this cluster's API server as a distinct Argo CD cluster secret
+      # (`argocd cluster add`) and reference it here instead of the local server.
+      destinationServer: https://production-dc1.example.com:6443
+      externalListener:
+        enabled: true
+        type: loadbalancer
+      users:
+        - name: mirrormaker
+          acls:
+            - resource:
+                type: topic
+                name: '*'
+                patternType: literal
+              operations:
+                - Read
+                - Describe
+            - resource:
+                type: group
+                name: '*'
+                patternType: literal
+              operations:
+                - Read
+
+    - role: passive
+      namespace: production-passive
+      destinationServer: https://production-dc2.example.com:6443
+      users:
+        - name: mirrormaker
+          acls:
+            - resource:
+                type: topic
+                name: '*'
+                patternType: literal
+              operations:
+                - Read
+                - Write
+                - Create
+                - Describe
+            - resource:
+                type: group
+                name: '*'
+                patternType: literal
+              operations:
+                - Read
+      mirrorMaker2:
+        enabled: true
+        replicas: 2
+        image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+        topicsPattern: '.*'
+        groupsPattern: '.*'
+        source:
+          alias: active
+          # External (loadbalancer) bootstrap address of the active site,
+          # since active/passive are on separate physical clusters here.
+          bootstrapServers: naip-kafka-kafka-bootstrap-external.production-active.example.com:9094
+          authentication:
+            type: scram-sha-512
+            username: mirrormaker
+            passwordSecretName: mirrormaker
+            passwordSecretKey: password

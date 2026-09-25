@@ -1,0 +1,10 @@
+# PRODUCTION is pinned to whatever tag has already been validated in staging —
+# always older than or equal to staging's tag, never `main`.
+cluster:
+  name: production
+environment:
+  name: production
+source:
+  repoURL: https://example.com/your-org/naip-argo.git
+  targetRevision: v1.0.0
+  path: solution

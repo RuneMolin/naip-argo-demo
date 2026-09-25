@@ -1,0 +1,24 @@
+# Single node pool combining controller + broker roles — simplest topology.
+# Split into separate controller-only/broker-only pools later if you need to
+# scale them independently (see the original kafka-helm-chart for that pattern).
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: kafka
+  namespace: {{ .Release.Namespace }}
+  labels:
+    strimzi.io/cluster: {{ .Values.kafka.clusterName }}
+spec:
+  replicas: {{ .Values.kafka.replicas }}
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: {{ .Values.kafka.storageSize }}
+        class: {{ .Values.kafka.storageClassName }}
+        deleteClaim: false
+        kraftMetadata: shared

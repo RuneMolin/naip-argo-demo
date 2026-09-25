@@ -1,0 +1,18 @@
+# Defaults only — real values come from values/<env>/values.yaml (see wrapper's
+# `valueFiles` reference) which is merged on top of this file by Helm.
+cluster:
+  name: unknown
+environment:
+  name: unknown
+argocd:
+  namespace: argocd
+  project: naip
+
+# Where Argo CD should fetch the leaf "kafka" chart from.
+kafkaChart:
+  repoURL: https://example.com/your-org/naip-argo.git
+  targetRevision: main
+  path: kafka
+
+kafka:
+  sites: []

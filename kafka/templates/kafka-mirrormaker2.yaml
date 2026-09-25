@@ -1,0 +1,63 @@
+# Deployed only on the PASSIVE side of an active/passive pair. It pulls data
+# FROM the remote "active" cluster INTO this ("target") cluster.
+#
+# IdentityReplicationPolicy is what makes this "active/passive" rather than
+# Strimzi's default "active/active" behaviour: topic names are copied as-is
+# (no "<sourceAlias>." prefix), so once mirrored, `orders.events` here is the
+# exact same topic name/contract as `orders.events` on the active cluster —
+# required so apps can fail over without changing topic names.
+#
+# NOTE: the `mirrormaker` KafkaUser + its Secret referenced below must exist
+# on the ACTIVE cluster (see kafka/templates/kafka-user.yaml + solution/values/active),
+# and the resulting password Secret has to be replicated into THIS namespace
+# out-of-band (Vault, External Secrets Operator, or a manual copy) since
+# Strimzi's User Operator only creates it in the active cluster's namespace.
+{{- if .Values.kafka.mirrorMaker2.enabled }}
+{{- $mm2 := .Values.kafka.mirrorMaker2 }}
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaMirrorMaker2
+metadata:
+  name: {{ .Values.kafka.clusterName }}-mm2
+  namespace: {{ .Release.Namespace }}
+spec:
+  version: {{ last (splitList "-" .Values.kafka.image) }}
+  replicas: {{ $mm2.replicas }}
+  # Connect workers run against the target (this, passive) cluster.
+  connectCluster: {{ .Values.kafka.clusterName }}
+  clusters:
+    - alias: {{ $mm2.source.alias }}
+      bootstrapServers: {{ $mm2.source.bootstrapServers }}
+      tls:
+        trustedCertificates: []
+      authentication:
+        type: {{ $mm2.source.authentication.type }}
+        username: {{ $mm2.source.authentication.username }}
+        passwordSecret:
+          secretName: {{ $mm2.source.authentication.passwordSecretName }}
+          password: {{ $mm2.source.authentication.passwordSecretKey }}
+    - alias: {{ .Values.kafka.clusterName }}
+      bootstrapServers: {{ .Values.kafka.clusterName }}-kafka-bootstrap:9092
+      authentication:
+        type: scram-sha-512
+        username: mirrormaker
+        passwordSecret:
+          secretName: mirrormaker
+          password: password
+  mirrors:
+    - sourceCluster: {{ $mm2.source.alias }}
+      targetCluster: {{ .Values.kafka.clusterName }}
+      sourceConnector:
+        tasksMax: 1
+        config:
+          replication.policy.class: org.apache.kafka.connect.mirror.IdentityReplicationPolicy
+          sync.topic.acls.enabled: 'false'
+      checkpointConnector:
+        tasksMax: 1
+        config:
+          replication.policy.class: org.apache.kafka.connect.mirror.IdentityReplicationPolicy
+      heartbeatConnector:
+        config:
+          replication.policy.class: org.apache.kafka.connect.mirror.IdentityReplicationPolicy
+      topicsPattern: {{ $mm2.topicsPattern | quote }}
+      groupsPattern: {{ $mm2.groupsPattern | quote }}
+{{- end }}

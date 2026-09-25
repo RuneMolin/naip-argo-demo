@@ -1,0 +1,29 @@
+# Literal entry point — apply this once per environment (`kubectl apply -f bootstrap/sandbox.yaml`
+# or `argocd app create -f bootstrap/sandbox.yaml`). Everything else in this
+# repo (solution, kafka) is generated from here downward; nothing points back
+# up at this file.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: naip-sandbox-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: naip
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sandbox
+  source:
+    repoURL: https://example.com/your-org/naip-argo.git
+    # Sandbox always tracks trunk — no promotion gate.
+    targetRevision: main
+    path: wrapper
+    helm:
+      releaseName: naip-sandbox-root
+      valueFiles:
+        - values/sandbox/values.yaml
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

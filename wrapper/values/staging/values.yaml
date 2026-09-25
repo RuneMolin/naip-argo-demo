@@ -1,0 +1,11 @@
+# STAGING is pinned to a release tag, not `main` — promotion means bumping
+# this tag (and the matching one in solution/values/staging/values.yaml),
+# not merging a branch.
+cluster:
+  name: staging
+environment:
+  name: staging
+source:
+  repoURL: https://example.com/your-org/naip-argo.git
+  targetRevision: v1.1.0
+  path: solution

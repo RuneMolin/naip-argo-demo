@@ -1,0 +1,10 @@
+# SANDBOX tracks the trunk branch directly — always deploys whatever is on
+# `main`, since sandbox has no change-control gate.
+cluster:
+  name: dev
+environment:
+  name: sandbox
+source:
+  repoURL: https://example.com/your-org/naip-argo.git
+  targetRevision: main
+  path: solution

@@ -1,0 +1,39 @@
+# SANDBOX: a simple environment — a single standalone Kafka cluster, no DR,
+# no MirrorMaker2. Good for dev/test where losing the cluster is a non-event.
+cluster:
+  name: dev
+environment:
+  name: sandbox
+
+kafka:
+  clusterName: naip-kafka
+  image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+  replicas: 1
+  storageClassName: standard
+  superUsers:
+    - admin
+
+  # Explicit topic declarations (no service-scanning) — add one entry per
+  # topic your applications need. `name` must be unique.
+  topics:
+    - name: orders.events
+      partitions: 3
+      replicationFactor: 1
+      config:
+        retention.ms: '604800000'
+    - name: orders.dead-letter
+      partitions: 1
+      replicationFactor: 1
+      config:
+        retention.ms: '1209600000'
+
+  apicurio:
+    enabled: true
+    image: apicurio/apicurio-registry-mem:2.6.6.Final
+    replicas: 1
+
+  # A single "standalone" site == exactly one Kafka cluster, one namespace,
+  # no MirrorMaker2. This is what makes sandbox "simple" vs. staging/production.
+  sites:
+    - role: standalone
+      namespace: sandbox

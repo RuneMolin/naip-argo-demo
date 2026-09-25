@@ -1,0 +1,48 @@
+# Nested under `kafka:` / `environment:` to match exactly what the
+# "solution" chart's Argo Application sends via helm.valuesObject.
+environment:
+  name: unknown
+
+kafka:
+  clusterName: naip-kafka
+  image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+  replicas: 3
+  storageClassName: standard
+  storageSize: 10Gi
+  superUsers: []
+
+  # Explicit topics: [{name, partitions, replicationFactor, config}]
+  topics: []
+
+  # Extra KafkaUsers beyond superUsers: [{name, secretName, acls}]
+  users: []
+
+  mirrorMaker2:
+    enabled: false
+    replicas: 1
+    image: sosconreg.azurecr.io/strimzi/kafka:1.0.0-kafka-4.2.0
+    topicsPattern: '.*'
+    groupsPattern: '.*'
+    source:
+      alias: active
+      bootstrapServers: ''
+      authentication:
+        type: scram-sha-512
+        username: mirrormaker
+        passwordSecretName: ''
+        passwordSecretKey: password
+
+  # External listener used for cross-cluster access (needed by the remote
+  # MirrorMaker2 to reach this cluster when it acts as the active/source side).
+  # Set `type` to whatever your platform supports: route | loadbalancer | nodeport | ingress.
+  externalListener:
+    enabled: false
+    type: loadbalancer
+
+  apicurio:
+    enabled: false
+    image: apicurio/apicurio-registry-mem:2.6.6.Final
+    replicas: 1
+    ingress:
+      enabled: false
+      host: ''

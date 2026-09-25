@@ -1,0 +1,9 @@
+apiVersion: v2
+name: naip-argo-wrapper
+description: >-
+  Root Argo CD Application ("app-of-apps" entry point). One release of this
+  chart is deployed per cluster/environment and it points Argo CD at the
+  `solution` chart for that same cluster/environment.
+type: application
+version: 0.1.0
+appVersion: '1.0'

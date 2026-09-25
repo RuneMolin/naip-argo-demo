@@ -1,0 +1,28 @@
+# Namespace + AppProject that everything for this cluster/environment lives in.
+# Kept in the wrapper chart because it must exist before any child Application
+# tries to deploy resources into it. Kafka's own per-site namespaces (e.g.
+# staging-active/staging-passive) are separate and self-created via
+# CreateNamespace=true on the kafka Applications (see solution/templates/kafka-argo-app.yaml).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.environment.name }}
+  labels:
+    environment: {{ .Values.environment.name }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: naip-{{ .Values.environment.name }}
+  namespace: {{ .Values.argocd.namespace }}
+spec:
+  # Wide open on purpose to keep the example simple — scope this down
+  # (specific destinations/resource kinds) for a real project.
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  sourceRepos:
+    - '*'

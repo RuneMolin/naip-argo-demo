@@ -1,0 +1,27 @@
+# Literal entry point for staging — apply once, then promote by bumping the
+# `targetRevision` tag here (and matching it in wrapper/values/staging and
+# solution/values/staging), not by merging a branch.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: naip-staging-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: naip
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: staging
+  source:
+    repoURL: https://example.com/your-org/naip-argo.git
+    targetRevision: v1.1.0
+    path: wrapper
+    helm:
+      releaseName: naip-staging-root
+      valueFiles:
+        - values/staging/values.yaml
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

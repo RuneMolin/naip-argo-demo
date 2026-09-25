@@ -1,0 +1,19 @@
+# Defaults only — real values come from values/<env>/values.yaml, selected by
+# the bootstrap Application for that environment (see /bootstrap).
+cluster:
+  name: unknown
+
+environment:
+  name: unknown
+
+argocd:
+  namespace: argocd
+  project: naip
+
+# Where Argo CD should fetch the "solution" chart from, and which revision.
+# `targetRevision` is the promotion lever: each environment pins its own ref
+# here (see values/<env>/values.yaml) instead of using a separate git branch.
+source:
+  repoURL: https://example.com/your-org/naip-argo.git
+  targetRevision: main
+  path: solution

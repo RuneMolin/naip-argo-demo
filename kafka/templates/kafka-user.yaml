@@ -1,0 +1,36 @@
+# One KafkaUser per superuser (no ACLs, just cluster-admin via authorization.superUsers
+# in kafka.yaml) plus any explicitly declared app/service users with scoped ACLs.
+# Passwords are left to Strimzi's User Operator to generate — it creates a
+# Secret named after the KafkaUser (e.g. `mirrormaker`) holding the password.
+{{- range .Values.kafka.superUsers }}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: {{ . }}-user
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    strimzi.io/cluster: {{ $.Values.kafka.clusterName }}
+spec:
+  authentication:
+    type: scram-sha-512
+{{- end }}
+{{- range .Values.kafka.users }}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    strimzi.io/cluster: {{ $.Values.kafka.clusterName }}
+spec:
+  authentication:
+    type: scram-sha-512
+  {{- if .acls }}
+  authorization:
+    type: simple
+    acls:
+      {{- toYaml .acls | nindent 6 }}
+  {{- end }}
+{{- end }}
