@@ -5,6 +5,6 @@ cluster:
 environment:
   name: sandbox
 source:
-  repoURL: https://example.com/your-org/naip-argo.git
+  repoURL: https://github.com/RuneMolin/naip-argo-demo.git
   targetRevision: main
   path: solution

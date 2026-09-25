@@ -14,6 +14,6 @@ argocd:
 # `targetRevision` is the promotion lever: each environment pins its own ref
 # here (see values/<env>/values.yaml) instead of using a separate git branch.
 source:
-  repoURL: https://example.com/your-org/naip-argo.git
+  repoURL: https://github.com/RuneMolin/naip-argo-demo.git
   targetRevision: main
   path: solution

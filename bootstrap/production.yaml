@@ -13,7 +13,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: production
   source:
-    repoURL: https://example.com/your-org/naip-argo.git
+    repoURL: https://github.com/RuneMolin/naip-argo-demo.git
     targetRevision: v1.0.0
     path: wrapper
     helm:

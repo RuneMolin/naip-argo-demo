@@ -124,11 +124,34 @@ flowchart TD
 5. **This repo** — apply the relevant `bootstrap/<env>.yaml` once (see below);
    from then on Argo CD self-manages `wrapper/` → `solution/` → `kafka/`.
 
+## Bootstrapping: the one manual step
+
+Once Argo CD and the Strimzi operator are installed (step 4 above), the
+entire `naip-argo` tree for an environment is bootstrapped with a single
+`kubectl apply`/`argocd app create` — everything after that is automated
+(`syncPolicy.automated` with `selfHeal: true` at every level):
+
+```
+kubectl apply -f bootstrap/sandbox.yaml
+```
+
+That file creates one root Argo CD `Application` (e.g. `naip-sandbox-root`)
+pointing at the `wrapper` chart. From there Argo CD cascades on its own:
+`wrapper` creates the environment `Namespace` + shared `naip` `AppProject`
+and a second-level Application pointing at `solution`, which in turn creates
+one third-level Application per `kafka.sites[]` entry pointing at `kafka`,
+which finally applies the Strimzi `Kafka`/`KafkaNodePool`/`KafkaTopic`/
+`KafkaUser`/Apicurio custom resources. No further manual steps are needed —
+repeat the same `kubectl apply` with `bootstrap/staging.yaml` /
+`bootstrap/production.yaml` for the other environments.
+
 ## How to adapt this for a new project
 
-1. Rename `naip-argo-*` in the three `Chart.yaml` files and update `repoURL`
-   values in [wrapper/values.yaml](wrapper/values.yaml), [solution/values.yaml](solution/values.yaml),
-   and every file under [bootstrap/](bootstrap).
+1. Rename `naip-argo-*` in the three `Chart.yaml` files and update the
+   `repoURL` values in [wrapper/values.yaml](wrapper/values.yaml),
+   [solution/values.yaml](solution/values.yaml), every file under
+   [wrapper/values/](wrapper/values), and every file under [bootstrap/](bootstrap)
+   to point at your fork/copy of this repo.
 2. Add one `wrapper/values/<env>/values.yaml` and one `solution/values/<env>/values.yaml`
    per environment, plus a matching `bootstrap/<env>.yaml`.
 3. List your real topics under `kafka.topics` in each env's solution values file.

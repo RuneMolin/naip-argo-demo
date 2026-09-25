@@ -15,7 +15,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: sandbox
   source:
-    repoURL: https://example.com/your-org/naip-argo.git
+    repoURL: https://github.com/RuneMolin/naip-argo-demo.git
     # Sandbox always tracks trunk — no promotion gate.
     targetRevision: main
     path: wrapper

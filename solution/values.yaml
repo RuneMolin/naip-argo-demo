@@ -10,7 +10,7 @@ argocd:
 
 # Where Argo CD should fetch the leaf "kafka" chart from.
 kafkaChart:
-  repoURL: https://example.com/your-org/naip-argo.git
+  repoURL: https://github.com/RuneMolin/naip-argo-demo.git
   targetRevision: main
   path: kafka
 

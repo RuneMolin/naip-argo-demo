@@ -13,7 +13,9 @@ metadata:
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: naip-{{ .Values.environment.name }}
+  # Shared name across environments — must match spec.project in bootstrap/*.yaml,
+  # wrapper/templates/application.yaml, and solution/templates/kafka-argo-app.yaml.
+  name: {{ .Values.argocd.project }}
   namespace: {{ .Values.argocd.namespace }}
 spec:
   # Wide open on purpose to keep the example simple — scope this down
