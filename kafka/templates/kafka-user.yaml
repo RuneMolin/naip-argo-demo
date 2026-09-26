@@ -4,7 +4,7 @@
 # Secret named after the KafkaUser (e.g. `mirrormaker`) holding the password.
 {{- range .Values.kafka.superUsers }}
 ---
-apiVersion: kafka.strimzi.io/v1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaUser
 metadata:
   name: {{ . }}-user
@@ -17,7 +17,7 @@ spec:
 {{- end }}
 {{- range .Values.kafka.users }}
 ---
-apiVersion: kafka.strimzi.io/v1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaUser
 metadata:
   name: {{ .name }}

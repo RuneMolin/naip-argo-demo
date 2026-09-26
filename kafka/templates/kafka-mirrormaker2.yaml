@@ -14,7 +14,7 @@
 # Strimzi's User Operator only creates it in the active cluster's namespace.
 {{- if .Values.kafka.mirrorMaker2.enabled }}
 {{- $mm2 := .Values.kafka.mirrorMaker2 }}
-apiVersion: kafka.strimzi.io/v1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaMirrorMaker2
 metadata:
   name: {{ .Values.kafka.clusterName }}-mm2

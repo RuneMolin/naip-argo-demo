@@ -13,8 +13,9 @@ metadata:
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  # Shared name across environments — must match spec.project in bootstrap/*.yaml,
-  # wrapper/templates/application.yaml, and solution/templates/kafka-argo-app.yaml.
+  # Shared name across environments — matches spec.project in
+  # wrapper/templates/application.yaml and solution/templates/kafka-argo-app.yaml
+  # (bootstrap/*.yaml uses project 'default' until this AppProject is created).
   name: {{ .Values.argocd.project }}
   namespace: {{ .Values.argocd.namespace }}
 spec:

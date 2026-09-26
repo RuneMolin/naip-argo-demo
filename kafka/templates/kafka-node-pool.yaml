@@ -1,7 +1,7 @@
 # Single node pool combining controller + broker roles — simplest topology.
 # Split into separate controller-only/broker-only pools later if you need to
 # scale them independently (see the original kafka-helm-chart for that pattern).
-apiVersion: kafka.strimzi.io/v1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaNodePool
 metadata:
   name: kafka
